@@ -1,29 +1,28 @@
 package learnrxjava.examples;
 
+import io.reactivex.Observable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.observers.TestObserver;
+import io.reactivex.schedulers.TestScheduler;
+import io.reactivex.subscribers.TestSubscriber;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import rx.Observable;
-import rx.observers.TestSubscriber;
-import rx.schedulers.Schedulers;
-import rx.schedulers.TestScheduler;
 
 public class UnitTesting {
 
-    public static void main(String... args) {
-        TestScheduler test = Schedulers.test();
-        TestSubscriber<String> ts = new TestSubscriber<>();
+  public static void main(String... args) {
+    TestScheduler scheduler = new TestScheduler();
 
-        Observable.interval(200, TimeUnit.MILLISECONDS, test)
-                .map(i -> {
-                    return i + " value";
-                }).subscribe(ts);
+    TestObserver<String> test = Observable.interval(200, TimeUnit.MILLISECONDS, scheduler)
+        .map(i -> i + " value")
+        .test();
 
-        test.advanceTimeBy(200, TimeUnit.MILLISECONDS);
-        ts.assertReceivedOnNext(Arrays.asList("0 value"));
+    scheduler.advanceTimeBy(200, TimeUnit.MILLISECONDS);
+    test.assertOf(c -> c.onNext("0 value"));
 
-        test.advanceTimeTo(1000, TimeUnit.MILLISECONDS);
-        ts.assertReceivedOnNext(Arrays.asList("0 value", "1 value", "2 value", "3 value", "4 value"));
-    }
+    scheduler.advanceTimeTo(1000, TimeUnit.MILLISECONDS);
+    test.assertOf(c -> c.onNext("4 value"));
+  }
 
 }

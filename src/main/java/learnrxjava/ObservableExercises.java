@@ -2,7 +2,7 @@ package learnrxjava;
 
 import learnrxjava.types.JSON;
 import learnrxjava.types.Movies;
-import rx.Observable;
+import io.reactivex.Observable;
 
 public class ObservableExercises {
 
@@ -38,7 +38,7 @@ public class ObservableExercises {
     /**
      * Flatten out all video in the stream of Movies into a stream of videoIDs
      * 
-     * @param movieLists
+     * @param movies
      * @return Observable of Integers of Movies.videos.id
      */
     public Observable<Integer> exerciseConcatMap(Observable<Movies> movies) {
@@ -55,7 +55,7 @@ public class ObservableExercises {
      * 
      * We'll see more about this later when we add concurrency.
      * 
-     * @param movieLists
+     * @param movies
      * @return Observable of Integers of Movies.videos.id
      */
     public Observable<Integer> exerciseFlatMap(Observable<Movies> movies) {

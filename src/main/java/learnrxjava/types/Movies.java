@@ -1,8 +1,7 @@
 package learnrxjava.types;
 
+import io.reactivex.Observable;
 import java.util.List;
-
-import rx.Observable;
 
 
 public class Movies {
@@ -17,7 +16,7 @@ public class Movies {
 
     public Movies(String name, List<Movie> videos) {
         this.name = name;
-        this.videos = Observable.from(videos);
+        this.videos = Observable.fromIterable(videos);
         this._v = videos;
     }
 }

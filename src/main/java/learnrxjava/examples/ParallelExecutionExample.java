@@ -1,109 +1,127 @@
 package learnrxjava.examples;
-import java.util.List;
 
-import rx.Observable;
-import rx.Subscriber;
-import rx.schedulers.Schedulers;
+import io.reactivex.Observable;
+import io.reactivex.schedulers.Schedulers;
 
 public class ParallelExecutionExample {
 
-    public static void run() {
-        Observable<Tile> searchTile = getSearchResults("search term");
+  public static void main(String[] args) {
+    final long startTime = System.currentTimeMillis();
 
-        Observable<TileResponse> populatedTiles = searchTile.flatMap(t -> {
-            Observable<Reviews> reviews = getSellerReviews(t.getSellerId());
-            Observable<String> imageUrl = getProductImage(t.getProductId());
+    Observable<Tile> searchTile = getSearchResults()
+        // 3 items
+        .doOnSubscribe(consumer -> logTime("Search started ", startTime))
+        .doOnComplete(() -> logTime("Search completed ", startTime));
 
-            return Observable.zip(reviews, imageUrl, (r, u) -> {
-                return new TileResponse(t, r, u);
-            });
-        });
+    Observable<TileResponse> populatedTiles = searchTile.flatMap(t -> {
+      Observable<Reviews> reviews = getSellerReviews(t.getSellerId())
+          .doOnComplete(() -> logTime("getSellerReviews[" + t.id + "] completed ", startTime));
+      Observable<String> imageUrl = getProductImage(t.getProductId())
+          .doOnComplete(() -> logTime("getProductImage[" + t.id + "] completed ", startTime));
 
-        List<TileResponse> allTiles = populatedTiles.toList()
-                .toBlocking().single();
-    }
-    
-    public static void main(String[] args) {
-        final long startTime = System.currentTimeMillis();
+      return Observable
+          .zip(reviews, imageUrl, (r, u) -> new TileResponse(t, r, u))
+          .doOnComplete(() -> logTime("zip[" + t.id + "] completed ", startTime));
+    });
 
-        Observable<Tile> searchTile = getSearchResults("search term")
-                .doOnSubscribe(() -> logTime("Search started ", startTime))
-                .doOnCompleted(() -> logTime("Search completed ", startTime));
+    populatedTiles.toList()
+        .doOnDispose(() -> logTime("All Tiles Completed ", startTime))
+        // subscribe
+        .blockingGet();
+  }
 
-        Observable<TileResponse> populatedTiles = searchTile.flatMap(t -> {
-            Observable<Reviews> reviews = getSellerReviews(t.getSellerId())
-                    .doOnCompleted(() -> logTime("getSellerReviews[" + t.id + "] completed ", startTime));
-            Observable<String> imageUrl = getProductImage(t.getProductId())
-                    .doOnCompleted(() -> logTime("getProductImage[" + t.id + "] completed ", startTime));
+  private static Observable<Tile> getSearchResults() {
+    return mockClient(new Tile(1), new Tile(2), new Tile(3));
+  }
 
-            return Observable.zip(reviews, imageUrl, (r, u) -> {
-                return new TileResponse(t, r, u);
-            }).doOnCompleted(() -> logTime("zip[" + t.id + "] completed ", startTime));
-        });
+  private static Observable<Reviews> getSellerReviews(int id) {
+    return mockClient(new Reviews(id));
+  }
 
-        List<TileResponse> allTiles = populatedTiles.toList()
-                .doOnCompleted(() -> logTime("All Tiles Completed ", startTime))
-                .toBlocking().single();
-    }
+  private static Observable<String> getProductImage(int id) {
+    return mockClient("image_" + id);
+  }
 
-    private static Observable<Tile> getSearchResults(String string) {
-        return mockClient(new Tile(1), new Tile(2), new Tile(3));
-    }
+  private static void logTime(String message, long startTime) {
+    System.out.println("[" + Thread.currentThread() + "] " + message + " => " + (System.currentTimeMillis() - startTime) + "ms");
+  }
 
-    private static Observable<Reviews> getSellerReviews(int id) {
-        return mockClient(new Reviews());
-    }
+  @SafeVarargs
+  private static <T> Observable<T> mockClient(T... ts) {
+    return Observable.<T>create(emitter -> {
+      // simulate latency
+      try {
+        Thread.sleep(1000);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+      for (T t : ts) {
+        emitter.onNext(t);
+      }
+      emitter.onComplete();
+    }).subscribeOn(Schedulers.io());
+    // note the use of subscribeOn to make an otherwise synchronous Observable async
+  }
 
-    private static Observable<String> getProductImage(int id) {
-        return mockClient("image_" + id);
-    }
+  public static class TileResponse {
 
-    private static void logTime(String message, long startTime) {
-        System.out.println(message + " => " + (System.currentTimeMillis() - startTime) + "ms");
-    }
+    private Tile tile;
+    private Reviews reviews;
+    private String u;
 
-    private static <T> Observable<T> mockClient(T... ts) {
-        return Observable.create((Subscriber<? super T> s) -> {
-            // simulate latency
-                try {
-                    Thread.sleep(1000);
-                } catch (Exception e) {
-                }
-                for (T t : ts) {
-                    s.onNext(t);
-                }
-                s.onCompleted();
-            }).subscribeOn(Schedulers.io());
-        // note the use of subscribeOn to make an otherwise synchronous Observable async
-    }
-
-    public static class TileResponse {
-
-        public TileResponse(Tile t, Reviews r, String u) {
-            // store the values
-        }
-
+    TileResponse(Tile t, Reviews r, String u) {
+      this.tile = t;
+      this.reviews = r;
+      this.u = u;
     }
 
-    public static class Tile {
+    @Override
+    public String toString() {
+      return "TileResponse{" +
+          "tile=" + tile +
+          ", reviews=" + reviews +
+          ", u='" + u + '\'' +
+          '}';
+    }
+  }
 
-        private final int id;
+  static class Tile {
 
-        public Tile(int i) {
-            this.id = i;
-        }
+    private final int id;
 
-        public int getSellerId() {
-            return id;
-        }
-
-        public int getProductId() {
-            return id;
-        }
-
+    Tile(int i) {
+      this.id = i;
     }
 
-    public static class Reviews {
-
+    int getSellerId() {
+      return id;
     }
+
+    int getProductId() {
+      return id;
+    }
+
+    @Override
+    public String toString() {
+      return "Tile{" +
+          "id=" + id +
+          '}';
+    }
+  }
+
+  static class Reviews {
+
+    private int id;
+
+    Reviews(int id) {
+      this.id = id;
+    }
+
+    @Override
+    public String toString() {
+      return "Reviews{" +
+          "id=" + id +
+          '}';
+    }
+  }
 }

@@ -1,8 +1,7 @@
 package learnrxjava.types;
 
+import io.reactivex.Observable;
 import java.util.List;
-
-import rx.Observable;
 
 public class Movie {
     @Override
@@ -29,17 +28,17 @@ public class Movie {
 
     public Movie(int id, String title, double rating, List<Bookmark> bookmarks, List<BoxArt> boxarts) {
         this(id, title, rating);
-        this.bookmarks = Observable.from(bookmarks);
-        this.boxarts = Observable.from(boxarts);
+        this.bookmarks = Observable.fromIterable(bookmarks);
+        this.boxarts = Observable.fromIterable(boxarts);
         this._bookmarks = bookmarks;
         this._boxarts = boxarts;
     }
 
     public Movie(int id, String title, double rating, List<Bookmark> bookmarks, List<BoxArt> boxarts, List<InterestingMoment> interestingMoments) {
         this(id, title, rating);
-        this.bookmarks = Observable.from(bookmarks);
-        this.boxarts = Observable.from(boxarts);
-        this.interestingMoments = Observable.from(interestingMoments);
+        this.bookmarks = Observable.fromIterable(bookmarks);
+        this.boxarts = Observable.fromIterable(boxarts);
+        this.interestingMoments = Observable.fromIterable(interestingMoments);
         
         this._bookmarks = bookmarks;
         this._boxarts = boxarts;
